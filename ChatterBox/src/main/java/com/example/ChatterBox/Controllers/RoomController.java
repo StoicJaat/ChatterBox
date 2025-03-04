@@ -12,14 +12,19 @@ import java.util.List;
 import java.util.Optional;
 
 
-@RestController("/room")
+@RestController
+@RequestMapping("/api/v1/rooms")
 public class RoomController {
 
     @Autowired
     private RoomRepo roomRepo;
 
-    @GetMapping("roombyid")
-    public ResponseEntity<?> findRoom(@PathVariable String roomId){
+    public RoomController(RoomRepo roomRepo) {
+        this.roomRepo = roomRepo;
+    }
+
+    @GetMapping("/{roomId}")
+    public ResponseEntity<?> joinRoom(@PathVariable String roomId){
 
         Room foundRoom = roomRepo.findRoomByRoomId(roomId);
         if(foundRoom != null){
@@ -29,14 +34,14 @@ public class RoomController {
         return ResponseEntity.badRequest().body("room not found");
     }
 
-    @PostMapping("/createroom")
-    public ResponseEntity<?> createRoom(@PathVariable String roomID){
+    @PostMapping("/{roomId}")
+    public ResponseEntity<?> createRoom(@PathVariable String roomId){
 
 
-        Room foundRoom = roomRepo.findRoomByRoomId(roomID);
+        Room foundRoom = roomRepo.findRoomByRoomId(roomId);
         if(foundRoom == null){
             Room newRoom = new Room();
-            newRoom.setRoomId(roomID);
+            newRoom.setRoomId(roomId);
             Room saveRoom = roomRepo.save(newRoom);
 
             return  ResponseEntity.status(HttpStatus.CREATED).body(newRoom +"Room created successfully." );
@@ -45,24 +50,32 @@ public class RoomController {
             return ResponseEntity.badRequest().body("Room already exists");
     }
 
-    @PutMapping("/updateroom")
+    @PutMapping("/update/{roomId}")
     public ResponseEntity<?> updateRoom(@RequestBody Room room, @PathVariable String roomId){
 
         Room foundRoom = roomRepo.findRoomByRoomId(roomId);
 
-
-
         return null;
     }
     
-    @GetMapping("/messages")
+    @GetMapping("/{roomId}/messages")
     public ResponseEntity<List<Message>> getMessages(@PathVariable String roomId , @RequestParam(value = "page", defaultValue = "0", required = false) int page, @RequestParam(value = "size", defaultValue = "20", required = false) int size){
 
-//        Room foundRoom = roomRepo.findById(roomId);
+        Room foundRoom = roomRepo.findRoomByRoomId(roomId);
 
-//        if(foundRoom == null){
-//
-//        }
-        return null;
+        if(foundRoom == null){
+            return ResponseEntity.badRequest().build();
+        }
+//        get messages & get pagination
+        List<Message> messages = foundRoom.getMessageList();
+
+        int start = Math.max(0,messages.size()-(page+1)*size);
+        int end = Math.min(messages.size(), start + size);
+
+        List<Message> paginatedMessages = messages.subList(start,end);
+
+
+        return  ResponseEntity.ok(paginatedMessages);
+
     }
 }
